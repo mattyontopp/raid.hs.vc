@@ -5,10 +5,8 @@ import MatrixRain from '@/components/MatrixRain';
 import GlitchText from '@/components/GlitchText';
 import { Zap, Palette, Music, Link as LinkIcon, Eye, Shield } from 'lucide-react';
 import heroBanner from '@/assets/hero-banner.jpg';
-
 const Landing = () => {
-  return (
-    <div className="min-h-screen relative overflow-hidden">
+  return <div className="min-h-screen relative overflow-hidden">
       <MatrixRain />
       
       <div className="relative z-10">
@@ -23,7 +21,7 @@ const Landing = () => {
                 // your links, your way
               </p>
               <p className="text-foreground/80 max-w-2xl mx-auto font-mono text-sm md:text-base">
-                Create a cyberpunk link-in-bio page with full customization. Change backgrounds, colors, fonts, add music - make it uniquely yours.
+                create your bio page. change colors, fonts, backgrounds, add music — make it yours.
               </p>
             </div>
 
@@ -34,22 +32,16 @@ const Landing = () => {
                   Get Started Free
                 </Button>
               </Link>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-primary/30 hover:border-primary text-lg px-8 py-6"
-                onClick={() => window.scrollTo({ top: window.innerHeight, behavior: 'smooth' })}
-              >
+              <Button size="lg" variant="outline" className="border-primary/30 hover:border-primary text-lg px-8 py-6" onClick={() => window.scrollTo({
+              top: window.innerHeight,
+              behavior: 'smooth'
+            })}>
                 Learn More
               </Button>
             </div>
 
             <div className="pt-8">
-              <img
-                src={heroBanner}
-                alt="Hero Banner"
-                className="rounded-lg border-2 border-primary/30 shadow-2xl box-glow-purple"
-              />
+              
             </div>
           </div>
         </section>
@@ -147,8 +139,6 @@ const Landing = () => {
 
       <div className="fixed top-0 right-0 w-96 h-96 bg-gradient-to-bl from-primary/10 via-transparent to-transparent pointer-events-none blur-3xl" />
       <div className="fixed bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-secondary/10 via-transparent to-transparent pointer-events-none blur-3xl" />
-    </div>
-  );
+    </div>;
 };
-
 export default Landing;
