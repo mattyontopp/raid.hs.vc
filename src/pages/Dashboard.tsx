@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { signOut } from '@/lib/auth';
-import { LogOut, Eye } from 'lucide-react';
+import { LogOut, Eye, Shield } from 'lucide-react';
 import { ProfileTab } from '@/components/dashboard/ProfileTab';
 import { AppearanceTab } from '@/components/dashboard/AppearanceTab';
 import { LinksTab } from '@/components/dashboard/LinksTab';
@@ -59,6 +59,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [isPremium, setIsPremium] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -93,6 +94,7 @@ const Dashboard = () => {
         .eq('user_id', user.id);
       
       setIsPremium(roles?.some(r => r.role === 'premium') || false);
+      setIsAdmin(roles?.some(r => r.role === 'admin') || false);
 
       setProfile(profileData);
       setPage(pageData);
@@ -125,6 +127,16 @@ const Dashboard = () => {
             <p className="text-muted-foreground font-mono text-sm">@{profile.username}</p>
           </div>
           <div className="flex gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/admin')}
+                className="border-primary/30 hover:border-primary"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Admin
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => window.open(`/${profile.username}`, '_blank')}
