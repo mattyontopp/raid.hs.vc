@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Trash2, Plus, Shield, Users, Hash, Ban, AlertTriangle, Key } from 'lucide-react';
+import { Trash2, Plus, Shield, Users, Hash, Lock } from 'lucide-react';
 
 interface User {
   id: string;
@@ -25,47 +25,52 @@ interface ReservedUsername {
 
 const Admin = () => {
   const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [reservedUsernames, setReservedUsernames] = useState<ReservedUsername[]>([]);
   const [newUsername, setNewUsername] = useState('');
   const [newReason, setNewReason] = useState('');
 
-  useEffect(() => {
-    checkAdminAccess();
-  }, []);
+  const validatePassword = async () => {
+    if (!password) {
+      toast.error('Please enter a password');
+      return;
+    }
 
-  const checkAdminAccess = async () => {
+    setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        navigate('/auth');
-        return;
+      const { data, error } = await supabase.functions.invoke('validate-admin-password', {
+        body: { password }
+      });
+
+      if (error) throw error;
+
+      if (data.valid) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('admin_authenticated', 'true');
+        loadData();
+        toast.success('Access granted');
+      } else {
+        toast.error('Invalid password');
+        setPassword('');
       }
-
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin');
-
-      if (!roles || roles.length === 0) {
-        toast.error('Access denied. Admin privileges required.');
-        navigate('/dashboard');
-        return;
-      }
-
-      setIsAdmin(true);
-      loadData();
     } catch (error) {
-      toast.error('Failed to verify admin access');
-      navigate('/dashboard');
+      toast.error('Authentication failed');
+      setPassword('');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const isAuth = sessionStorage.getItem('admin_authenticated') === 'true';
+    if (isAuth) {
+      setIsAuthenticated(true);
+      loadData();
+    }
+  }, []);
 
   const loadData = async () => {
     // Load users with their roles
@@ -187,16 +192,48 @@ const Admin = () => {
     }
   };
 
-  if (loading) {
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-primary font-mono animate-pulse">Verifying access...</p>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-card/50 backdrop-blur-sm border-primary/20 p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Lock className="w-8 h-8 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold text-primary font-mono">Admin Access</h1>
+              <p className="text-muted-foreground font-mono text-sm">Enter password to continue</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <Label className="font-mono">Password</Label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && validatePassword()}
+                placeholder="Enter admin password"
+                className="bg-background/50 border-primary/30 font-mono"
+                disabled={loading}
+              />
+            </div>
+            <Button 
+              onClick={validatePassword} 
+              className="w-full bg-primary"
+              disabled={loading}
+            >
+              {loading ? 'Verifying...' : 'Access Admin Panel'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="w-full border-primary/30"
+            >
+              Back to Dashboard
+            </Button>
+          </div>
+        </Card>
       </div>
     );
-  }
-
-  if (!isAdmin) {
-    return null;
   }
 
   return (
@@ -272,14 +309,6 @@ const Admin = () => {
                           title={user.roles?.includes('premium') ? 'Remove Premium' : 'Add Premium'}
                         >
                           <Shield className={`h-4 w-4 ${user.roles?.includes('premium') ? 'text-primary' : 'text-muted-foreground'}`} />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => toggleUserRole(user.id, 'admin', user.roles || [])}
-                          title={user.roles?.includes('admin') ? 'Remove Admin' : 'Add Admin'}
-                        >
-                          <Key className={`h-4 w-4 ${user.roles?.includes('admin') ? 'text-primary' : 'text-muted-foreground'}`} />
                         </Button>
                         <Button
                           size="icon"
