@@ -7,13 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Trash2, Plus, Shield, Users, Hash } from 'lucide-react';
+import { Trash2, Plus, Shield, Users, Hash, Ban, AlertTriangle, Key } from 'lucide-react';
 
 interface User {
   id: string;
   username: string;
   email: string;
   created_at: string;
+  roles?: string[];
 }
 
 interface ReservedUsername {
@@ -67,14 +68,29 @@ const Admin = () => {
   };
 
   const loadData = async () => {
-    // Load users
+    // Load users with their roles
     const { data: profilesData } = await supabase
       .from('profiles')
       .select('id, username, created_at')
       .order('created_at', { ascending: false });
 
     if (profilesData) {
-      setUsers(profilesData.map(p => ({ ...p, email: '' })));
+      // Load roles for each user
+      const usersWithRoles = await Promise.all(
+        profilesData.map(async (profile) => {
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', profile.id);
+          
+          return {
+            ...profile,
+            email: '',
+            roles: rolesData?.map(r => r.role) || []
+          };
+        })
+      );
+      setUsers(usersWithRoles);
     }
 
     // Load reserved usernames
@@ -139,6 +155,38 @@ const Admin = () => {
     }
   };
 
+  const toggleUserRole = async (userId: string, role: 'premium' | 'admin', currentRoles: string[]) => {
+    const hasRole = currentRoles.includes(role);
+    
+    if (hasRole) {
+      // Remove role
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', role);
+
+      if (error) {
+        toast.error(`Failed to remove ${role} role`);
+      } else {
+        toast.success(`${role} role removed`);
+        loadData();
+      }
+    } else {
+      // Add role
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({ user_id: userId, role });
+
+      if (error) {
+        toast.error(`Failed to add ${role} role`);
+      } else {
+        toast.success(`${role} role added`);
+        loadData();
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -196,25 +244,55 @@ const Admin = () => {
                   users.map((user) => (
                     <div
                       key={user.id}
-                      className="flex items-center justify-between p-3 bg-background/30 rounded-lg border border-primary/20"
+                      className="flex items-center justify-between gap-4 p-4 bg-background/30 rounded-lg border border-primary/20"
                     >
-                      <div>
+                      <div className="flex-1">
                         <p className="font-semibold font-mono">@{user.username}</p>
                         <p className="text-xs text-muted-foreground font-mono">
                           Joined {new Date(user.created_at).toLocaleDateString()}
                         </p>
+                        {user.roles && user.roles.length > 0 && (
+                          <div className="flex gap-1 mt-2">
+                            {user.roles.map((role) => (
+                              <span
+                                key={role}
+                                className="text-xs px-2 py-1 rounded-full bg-primary/20 text-primary font-mono"
+                              >
+                                {role}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          if (confirm(`Delete user @${user.username}?`)) {
-                            deleteUser(user.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => toggleUserRole(user.id, 'premium', user.roles || [])}
+                          title={user.roles?.includes('premium') ? 'Remove Premium' : 'Add Premium'}
+                        >
+                          <Shield className={`h-4 w-4 ${user.roles?.includes('premium') ? 'text-primary' : 'text-muted-foreground'}`} />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => toggleUserRole(user.id, 'admin', user.roles || [])}
+                          title={user.roles?.includes('admin') ? 'Remove Admin' : 'Add Admin'}
+                        >
+                          <Key className={`h-4 w-4 ${user.roles?.includes('admin') ? 'text-primary' : 'text-muted-foreground'}`} />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm(`Delete user @${user.username}?`)) {
+                              deleteUser(user.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}

@@ -137,6 +137,16 @@ const Dashboard = () => {
                 Admin
               </Button>
             )}
+            {!isPremium && (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/premium')}
+                className="border-primary/30 hover:border-primary"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Get Premium
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => window.open(`/${profile.username}`, '_blank')}

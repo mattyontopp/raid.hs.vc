@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { signIn, signUp, getCurrentUser } from '@/lib/auth';
+import { supabase } from '@/integrations/supabase/client';
 import MatrixRain from '@/components/MatrixRain';
 import GlitchText from '@/components/GlitchText';
 import { z } from 'zod';
@@ -67,6 +68,16 @@ const Auth = () => {
           navigate('/dashboard');
         }
       } else {
+        // Check if username is reserved
+        const { data: isReserved } = await supabase
+          .rpc('is_username_reserved', { _username: username.toLowerCase() });
+        
+        if (isReserved) {
+          toast.error('This username is reserved and cannot be used');
+          setLoading(false);
+          return;
+        }
+
         const { error } = await signUp(email, password, username.toLowerCase());
         if (error) {
           if (error.message.includes('already registered')) {
